@@ -1,1 +1,1 @@
-"web: python steganography.py" 
+web: python steganography.py
