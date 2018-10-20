@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>hide a message</title>
+        <!-- <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/app.css') }}"> -->
+    </head>
+
+    <body>
+        <form action="/upload" id="encode" method="post" enctype="multipart/form-data" >
+            <span>
+                Browse <input type="file" name="image">
+            </span>
+            <span>
+                <textarea rows="4" cols="50" name="message" form="encode"></textarea>
+            </span>
+            <input type="submit" value="Upload your image">
+        </form>
+        
+        {% include 'flash.html' %}
+    </body>
+</html>
