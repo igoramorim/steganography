@@ -1,4 +1,5 @@
 import os
+import random
 from flask import Flask, request, redirect, url_for, render_template, flash, send_file
 from werkzeug.utils import secure_filename
 from PIL import Image, ImageDraw
@@ -24,23 +25,59 @@ def encode_image(image, msg):
     encoded_img = img.copy()
     encoded_pixels = encoded_img.load()
 
-    count = 0
-    len_msg = len(msg)
+    key = ''
+    positions = []
 
-    # TODO: usar pixels em posições não sequenciais
-    # TODO: gerar uma key a partir dos pixels encodados
-    for i in range(img.size[0]):
-        for j in range(img.size[1]):
-            r, g, b = encoded_pixels[i, j][:-1]
-            if count < len_msg:
-                encoded_pixels[i, j] = (ord(msg[count]), g, b)
-                count += 1
-            else:
-                encoded_pixels[i, j] = (r, g, b)
+    for i in range(len(msg)):
+        position = get_position(img.size[0], img.size[1], positions)
+        x = position[0]
+        y = position[1]
+        r, g, b = encoded_pixels[x, y]
+        pixel_old = encoded_pixels[x, y][0]
+        encoded_pixels[x, y] = (ord(msg[i]), g, b)
+        # print(encoded_pixels[x, y])
+        positions.append(format_position_encode(position))
+        print('x: {} \t\ty: {} \t\tletra: {} \tencoded: {} \tpixel_old: {}'.format(str(x), str(y), msg[i], ord(msg[i]), pixel_old))
+        # print('')
 
     filename = secure_filename(image.filename)
     encoded_img.save(PATH_TO_UPLOAD + '/encoded_' + filename)
-    return filename
+    key = generate_key(positions)
+    return filename, key
+
+
+def generate_key(positions):
+    key = ''
+    for pos in positions:
+        for coord in pos:
+            key += coord
+
+    return key
+
+
+def format_position_encode(position):
+    new_position = []
+    for coord in position:
+        prefix = ''
+        dif = 4 - len(str(coord))
+        prefix = '0' * dif
+
+        new_position.append(prefix + str(coord))
+
+    # print('x: {} \ty: {}'.format(new_position[0], new_position[1]))
+    return new_position
+
+
+def get_position(x_len, y_len, positions):
+    x = random.randrange(x_len)
+    y = random.randrange(y_len)
+    position = [x, y]
+    if position in positions:
+        # print('duplicada')
+        # print(position)
+        get_position(x_len, y_len, positions)
+    else:
+        return position
 
 
 def decode_image(image, key):
@@ -48,13 +85,28 @@ def decode_image(image, key):
     pixels = img.load()
 
     msg = ''
-    
-    # TODO: fazer leitura da key para recuperar mensagem encodada
-    for i in range(len('igor')):
-        r = pixels[i, 0][0]
-        msg += chr(r)
+    positions = []
+
+    for i in range(0, len(key), 8):
+        coord = key[i:i+8]
+        x = coord[:4]
+        y = coord[4:]
+        positions.append([int(x), int(y)])
+        # print('x: {} \ty: {}'.format(x, y))
+
+    for pos in positions:
+        x = pos[0]
+        y = pos[1]
+        pixel = pixels[x, y][0]
+        print('x: {} \ty: {} \tpixel: {} \tmsg: {}'.format(x, y, pixel, chr(pixel)))
+        msg += chr(pixel)
 
     return msg
+
+
+#####################################################################################
+#                               ENDPOINTS
+#####################################################################################
 
 
 @app.route('/')
@@ -63,11 +115,11 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/encoded_<string:filename>')
-def encoded_image(filename):
+@app.route('/encoded_<string:filename>key<string:key>')
+def encoded_image(filename, key):
     path = PATH_TO_UPLOAD + '/encoded_' + filename
     # path = os.path.join(app.config['UPLOAD_FOLDER'], 'encoded_puppy_text.png')
-    return render_template('encoded.html', path=path, key="teste")
+    return render_template('encoded.html', path=path, key=key)
     # return send_file(PATH_TO_UPLOAD + '/encoded_' + filename, mimetype="image/gif")
 
 
@@ -86,12 +138,21 @@ def upload_file():
     #     return redirect(request.url)
 
     if file and allowed_file(file.filename):
-        filename = encode_image(file, message)
+        encoded_image = encode_image(file, message)
+        print(encoded_image)
         
         # return send_file(PATH_TO_UPLOAD + '/encoded_' + filename, mimetype="image/gif")
-        return redirect(url_for('encoded_image', filename=filename))
+        return redirect(url_for('encoded_image', filename=encoded_image[0], key=encoded_image[1]))
         
     # return render_template('index.html')
+
+
+@app.route('/decode', methods=['POST'])
+def decoded_file():
+    file = request.files['imageEncoded']
+    key = request.form['key']
+    decoded_message = decode_image(file, key)
+    return render_template('decoded.html', decoded_message=decoded_message)
 
 
 @app.errorhandler(404)

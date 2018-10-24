@@ -7,12 +7,24 @@
     </head>
 
     <body>
+        <h1>encode</h1>
         <form action="/upload" id="encode" method="post" enctype="multipart/form-data" >
             <span>
                 Browse <input type="file" name="image">
             </span>
             <span>
                 <textarea rows="4" cols="50" name="message" form="encode"></textarea>
+            </span>
+            <input type="submit" value="Upload your image">
+        </form>
+
+        <h1>decode</h1>
+        <form action="/decode" id="decode" method="post" enctype="multipart/form-data" >
+            <span>
+                Browse <input type="file" name="imageEncoded">
+            </span>
+            <span>
+                <textarea rows="4" cols="50" name="key" form="decode"></textarea>
             </span>
             <input type="submit" value="Upload your image">
         </form>
