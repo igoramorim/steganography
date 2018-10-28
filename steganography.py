@@ -6,18 +6,14 @@ from PIL import Image, ImageDraw
 
 
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['png'])
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = "super secret key2"
 
 PATH_TO_UPLOAD = os.path.join(app.config['UPLOAD_FOLDER'])
-
-
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+MAX_LEN_MESSAGE = 140
 
 
 def encode_image(image, msg):
@@ -32,9 +28,11 @@ def encode_image(image, msg):
         position = get_position(img.size[0], img.size[1], positions)
         x = position[0]
         y = position[1]
+
         r, g, b = encoded_pixels[x, y]
         pixel_old = encoded_pixels[x, y][0]
         encoded_pixels[x, y] = (ord(msg[i]), g, b)
+
         # print(encoded_pixels[x, y])
         positions.append(format_position_encode(position))
         print('x: {} \t\ty: {} \t\tletra: {} \tencoded: {} \tpixel_old: {}'.format(str(x), str(y), msg[i], ord(msg[i]), pixel_old))
@@ -104,6 +102,39 @@ def decode_image(image, key):
     return msg
 
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def validate_upload_encode(file, message):
+    if not file or file.filename == '' or not allowed_file(file.filename):
+        flash('Please, upload a PNG image to encode.')
+        return False
+
+    if not message or len(message) <= 0:
+        flash('Please, enter a message to encode!')
+        return False
+
+    if MAX_LEN_MESSAGE < len(message):
+        flash('Message too large. Max length: 140 characters.')
+        return False
+
+    return True
+
+
+def validate_upload_decode(file, message):
+    if not file or file.filename == '' or not allowed_file(file.filename):
+        flash('Please, upload a PNG image to decode.')
+        return False
+
+    if not message or len(message) <= 0:
+        flash('Please, enter the key of the image to decode!')
+        return False
+
+    return True
+
+
 #####################################################################################
 #                               ENDPOINTS
 #####################################################################################
@@ -125,34 +156,24 @@ def encoded_image(filename, key):
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    file = request.files['image']
-    message = request.form['message']
-    
-    # TODO: validacoes tamanho imagem, extensao, tamanho message etc
-    # if file not in request.files:
-    #     flash('No file part')
-    #     return redirect(request.url)
-    
-    # if file.filename == '':
-    #     flash('No selected file')
-    #     return redirect(request.url)
-
-    if file and allowed_file(file.filename):
+    if validate_upload_encode(request.files['image'], request.form['message']):
+        file = request.files['image']
+        message = request.form['message']
         encoded_image = encode_image(file, message)
-        print(encoded_image)
-        
-        # return send_file(PATH_TO_UPLOAD + '/encoded_' + filename, mimetype="image/gif")
         return redirect(url_for('encoded_image', filename=encoded_image[0], key=encoded_image[1]))
-        
-    # return render_template('index.html')
+    else:
+        return redirect(url_for('index'))
 
 
 @app.route('/decode', methods=['POST'])
 def decoded_file():
-    file = request.files['imageEncoded']
-    key = request.form['key']
-    decoded_message = decode_image(file, key)
-    return render_template('decoded.html', decoded_message=decoded_message)
+    if validate_upload_decode(request.files['imageEncoded'], request.form['key']):
+        file = request.files['imageEncoded']
+        key = request.form['key']
+        decoded_message = decode_image(file, key)
+        return render_template('decoded.html', decoded_message=decoded_message)
+    else:
+        return redirect(url_for('index'))
 
 
 @app.errorhandler(404)
@@ -167,4 +188,4 @@ def internal_error(error):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=False, host='0.0.0.0', port=port)

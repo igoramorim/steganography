@@ -7,6 +7,8 @@
     </head>
 
     <body>
+        {% include 'flash.html' %}
+
         <h1>encode</h1>
         <form action="/upload" id="encode" method="post" enctype="multipart/form-data" >
             <span>
@@ -28,7 +30,6 @@
             </span>
             <input type="submit" value="Upload your image">
         </form>
-        
-        {% include 'flash.html' %}
+    
     </body>
 </html>
