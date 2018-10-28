@@ -1,1 +1,18 @@
-<span>{{decoded_message}}</span>
+<!DOCTYPE html>
+<html lang="en">
+        {% include 'head.html' %}
+
+    <body>
+        <div class="container">
+            <div class="row">
+                <h1 class="display-4">Decoded!</h1>
+            </div>
+            <hr>          
+            <div class="form-group">
+                <textarea class="form-control" disabled rows="10" cols="50">{{decoded_message}}</textarea>
+            </div>
+        </div>
+        
+        {% include 'scripts.html' %}        
+    </body>
+</html>
